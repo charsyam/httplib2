@@ -1204,6 +1204,9 @@ class Http(object):
 
         # If set to False then no redirects are followed, even safe ones.
         self.follow_redirects = True
+        self.save_redirect_histories = False
+
+        self.redirect_histories = []
 
         # Which HTTP methods do we apply optimistic concurrency to, i.e.
         # which methods get an "if-match:" etag header added to them.
@@ -1255,6 +1258,9 @@ class Http(object):
         """Add a key and cert that will be used
         any time a request requires authentication."""
         self.certificates.add(key, cert, domain)
+
+    def clear_redirects_list(self):
+        self.redirect_histories = []
 
     def clear_credentials(self):
         """Remove all the names and passwords
@@ -1394,6 +1400,7 @@ class Http(object):
                         if not old_response.has_key('content-location'):
                             old_response['content-location'] = absolute_uri
                         redirect_method = method
+
                         if response.status in [302, 303]:
                             redirect_method = "GET"
                             body = None
@@ -1402,6 +1409,9 @@ class Http(object):
                             body=body, headers=headers,
                             redirections=redirections - 1)
                         response.previous = old_response
+
+                    if self.save_redirect_histories:
+                        self.redirect_histories.insert(0, location)
                 else:
                     raise RedirectLimit("Redirected more times than rediection_limit allows.", response, content)
             elif response.status in [200, 203] and method in ["GET", "HEAD"]:
